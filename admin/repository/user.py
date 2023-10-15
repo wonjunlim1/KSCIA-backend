@@ -6,29 +6,20 @@ from fastapi import HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import RedirectResponse, Response, JSONResponse
 import datetime
+from utils.checkAdmin import check_admin
 
 
-def create(request: schemas.User, db: Session):
-
-    user = dict(request)
-    user.update(password=hashing.Hash.bcrypt(user['password']))
-
-    new_user = models.User(**dict(user))
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    return JSONResponse(
-        jsonable_encoder({"username": user['username']}), status_code=status.HTTP_201_CREATED)
-
-
-def show(db: Session, current_user:schemas.User):
-    user = db.query(models.User).filter(
-        models.User.id == current_user.id).first()
-    if not user:
+def get_clients(db: Session, current_user: schemas.User):
+    # if not check_admin(db, current_user):
+    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+    #                         detail=f"Please log in as administrator")
+    check_admin(db, current_user)
+    clients = db.query(models.User).filter(
+        models.User.role == 0).all()
+    if not clients:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"User with the id '{id}' is not found")
-    return user
+    return clients
 
 
 def update(request: schemas.UpdateUser, db: Session, current_user: schemas.User):

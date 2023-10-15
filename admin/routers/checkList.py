@@ -1,0 +1,41 @@
+import datetime
+from fastapi import APIRouter, Depends, Request
+import oauth2
+import schemas
+import database
+from sqlalchemy.orm import Session
+from admin.repository import checkList
+from fastapi.responses import HTMLResponse
+from typing import List
+from datetime import datetime, timedelta, timezone
+
+router = APIRouter(
+    prefix='/admin/checklist',
+    tags=['(ADMIN) checklist']
+)
+get_db = database.get_db
+
+todayDate = datetime.today().astimezone(
+    timezone(timedelta(hours=9))).strftime("%Y-%m-%d")
+
+
+@router.post('/', response_model=schemas.CheckList)
+async def createCheckList(request: list[schemas.CheckList], db: Session = Depends(get_db), current_user: schemas.User = Depends(oauth2.get_current_user)):
+    return checkList.create(request, db, current_user)
+
+
+@router.get('/', response_model=list[schemas.ResponseCheckList])
+@router.get('/date/{date}', response_model=list[schemas.ResponseCheckList])
+async def get_user_checklist_by_date(user_id: int, date: str = todayDate, db: Session = Depends(get_db), current_user: schemas.User = Depends(oauth2.get_current_user)):
+
+    return checkList.get_by_date(user_id, date, db, current_user)
+
+
+@router.get('/dates', response_model=list[schemas.ResponseCheckList])
+async def get_user_checklist_by_dates(user_id: int, start_date: str = todayDate, end_date: str = todayDate, db: Session = Depends(get_db), current_user: schemas.User = Depends(oauth2.get_current_user)):
+    return checkList.get_by_period(user_id, start_date, end_date, db, current_user)
+
+
+@router.delete('/{code}')
+async def deleteTodo(code: int, db: Session = Depends(get_db)):
+    return checkList.delete(code, db)
